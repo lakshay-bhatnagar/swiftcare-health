@@ -3,24 +3,53 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { AppProvider } from "@/context/AppContext";
+
+// Pages
+import Splash from "./pages/Splash";
+import Onboarding from "./pages/Onboarding";
+import Auth from "./pages/Auth";
+import Home from "./pages/Home";
+import Browse from "./pages/Browse";
+import Search from "./pages/Search";
+import MedicineDetail from "./pages/MedicineDetail";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Emergency from "./pages/Emergency";
+import Consultation from "./pages/Consultation";
+import Profile from "./pages/Profile";
+import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AppProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/splash" element={<Splash />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/browse" element={<Browse />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/medicine/:id" element={<MedicineDetail />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/emergency" element={<Emergency />} />
+            <Route path="/consultation" element={<Consultation />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/orders" element={<Orders />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AppProvider>
   </QueryClientProvider>
 );
 
