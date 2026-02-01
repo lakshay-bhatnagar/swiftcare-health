@@ -2,95 +2,143 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* SwiftCare Design System - Healthcare Mobile App */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core Healthcare Colors */
+    --background: 150 20% 98%;
+    --foreground: 200 25% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 200 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 200 25% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Teal/Mint for Trust & Health */
+    --primary: 168 84% 32%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 168 60% 95%;
+    --primary-muted: 168 40% 85%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Soft Gray Blue */
+    --secondary: 200 15% 94%;
+    --secondary-foreground: 200 25% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Accent - Coral/Orange for CTAs */
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 24 100% 95%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Muted */
+    --muted: 200 15% 96%;
+    --muted-foreground: 200 10% 50%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Emergency Red */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-light: 0 85% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Success Green */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 60% 95%;
 
-    --radius: 0.5rem;
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 100% 95%;
 
+    /* Borders & Inputs */
+    --border: 200 20% 90%;
+    --input: 200 20% 92%;
+    --ring: 168 84% 32%;
+
+    --radius: 1rem;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(200 25% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(200 25% 15% / 0.08), 0 2px 4px -2px hsl(200 25% 15% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(200 25% 15% / 0.08), 0 4px 6px -4px hsl(200 25% 15% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(200 25% 15% / 0.1), 0 8px 10px -6px hsl(200 25% 15% / 0.05);
+    --shadow-card: 0 2px 8px -2px hsl(200 25% 15% / 0.08), 0 4px 16px -4px hsl(200 25% 15% / 0.06);
+
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 200 25% 25%;
+    --sidebar-primary: 168 84% 32%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 15% 94%;
+    --sidebar-accent-foreground: 200 25% 25%;
+    --sidebar-border: 200 20% 90%;
+    --sidebar-ring: 168 84% 32%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Chart Colors */
+    --chart-1: 168 84% 32%;
+    --chart-2: 24 95% 53%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 84% 60%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 200 30% 8%;
+    --foreground: 150 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 200 25% 12%;
+    --card-foreground: 150 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 200 25% 12%;
+    --popover-foreground: 150 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 168 70% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 168 50% 15%;
+    --primary-muted: 168 30% 20%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 200 20% 18%;
+    --secondary-foreground: 150 20% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 24 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 24 50% 15%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 200 20% 15%;
+    --muted-foreground: 200 15% 60%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-light: 0 50% 15%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --success: 142 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 40% 15%;
+
+    --warning: 38 80% 55%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 50% 15%;
+
+    --border: 200 20% 20%;
+    --input: 200 20% 18%;
+    --ring: 168 70% 45%;
+
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.4), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5), 0 8px 10px -6px hsl(0 0% 0% / 0.4);
+    --shadow-card: 0 2px 8px -2px hsl(0 0% 0% / 0.4), 0 4px 16px -4px hsl(0 0% 0% / 0.3);
+
+    --sidebar-background: 200 25% 10%;
+    --sidebar-foreground: 150 20% 90%;
+    --sidebar-primary: 168 70% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 200 20% 15%;
+    --sidebar-accent-foreground: 150 20% 90%;
+    --sidebar-border: 200 20% 18%;
+    --sidebar-ring: 168 70% 45%;
   }
 }
 
@@ -99,7 +147,197 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Hide scrollbar for mobile feel */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  /* SwiftCare Card Styles */
+  .swift-card {
+    @apply bg-card rounded-2xl p-4 shadow-[var(--shadow-card)] border border-border/50;
+  }
+
+  .swift-card-hover {
+    @apply swift-card transition-all duration-300 hover:shadow-[var(--shadow-lg)] hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  /* Gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(168 84% 40%) 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(24 95% 60%) 100%);
+  }
+
+  .gradient-emergency {
+    background: linear-gradient(135deg, hsl(var(--destructive)) 0%, hsl(0 84% 50%) 100%);
+  }
+
+  .gradient-success {
+    background: linear-gradient(135deg, hsl(var(--success)) 0%, hsl(142 76% 45%) 100%);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/30;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-muted rounded-lg;
+  }
+
+  /* Safe area for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Bottom nav safe area */
+  .bottom-nav-padding {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+
+  /* Input styles */
+  .swift-input {
+    @apply w-full px-4 py-3 bg-input rounded-xl border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200;
+  }
+
+  /* Badge styles */
+  .swift-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .swift-badge-primary {
+    @apply swift-badge bg-primary-light text-primary;
+  }
+
+  .swift-badge-accent {
+    @apply swift-badge bg-accent-light text-accent;
+  }
+
+  .swift-badge-success {
+    @apply swift-badge bg-success-light text-success;
+  }
+
+  .swift-badge-warning {
+    @apply swift-badge bg-warning-light text-warning;
+  }
+
+  .swift-badge-destructive {
+    @apply swift-badge bg-destructive-light text-destructive;
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.4s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  .animate-bounce-subtle {
+    animation: bounceSubtle 0.6s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes bounceSubtle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  /* Pulse animation for emergency */
+  .animate-pulse-emergency {
+    animation: pulseEmergency 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseEmergency {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 12px hsl(var(--destructive) / 0);
+    }
   }
 }
