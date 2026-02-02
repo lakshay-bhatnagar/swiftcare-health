@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronDown, Pill, Ambulance, Stethoscope, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -8,9 +8,11 @@ import { CategoryCard } from '@/components/common/CategoryCard';
 import { PharmacyCard } from '@/components/common/PharmacyCard';
 import { MedicineCard } from '@/components/common/MedicineCard';
 import { ListSkeleton, GridSkeleton } from '@/components/common/LoadingSkeleton';
+import { AddressSelectorModal } from '@/components/address/AddressSelectorModal';
 import { useApp } from '@/context/AppContext';
-import { api, categories, mockMedicines, mockPharmacies } from '@/services/api';
-import { Pharmacy, Medicine } from '@/context/AppContext';
+import { api, categories, mockPharmacies } from '@/services/api';
+import { Pharmacy, Medicine } from '@/types';
+import { useEffect } from 'react';
 
 const quickActions = [
   {
@@ -38,11 +40,12 @@ const quickActions = [
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useApp();
+  const { user, selectedAddress, unreadNotificationCount } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddressModal, setShowAddressModal] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,6 +65,9 @@ export const Home: React.FC = () => {
   }, []);
 
   const firstName = user?.name?.split(' ')[0] || 'there';
+  const displayAddress = selectedAddress 
+    ? `${selectedAddress.addressLine1}, ${selectedAddress.city}` 
+    : 'Add your address';
 
   return (
     <MobileLayout>
@@ -70,17 +76,27 @@ export const Home: React.FC = () => {
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
           <div>
             <p className="text-muted-foreground text-sm">Deliver to</p>
-            <button className="flex items-center gap-1 font-semibold">
+            <button 
+              onClick={() => setShowAddressModal(true)}
+              className="flex items-center gap-1 font-semibold"
+            >
               <MapPin size={16} className="text-primary" />
               <span className="truncate max-w-[180px]">
-                {user?.address?.line1 || 'Add your address'}
+                {displayAddress}
               </span>
               <ChevronDown size={16} className="text-muted-foreground" />
             </button>
           </div>
-          <button className="relative p-2 bg-muted rounded-xl">
+          <button 
+            onClick={() => navigate('/notifications')}
+            className="relative p-2 bg-muted rounded-xl"
+          >
             <Bell size={20} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-accent-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -217,6 +233,12 @@ export const Home: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Address Selector Modal */}
+      <AddressSelectorModal
+        isOpen={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+      />
     </MobileLayout>
   );
 };

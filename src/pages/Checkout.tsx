@@ -1,47 +1,154 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CreditCard, Wallet, Banknote, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, CreditCard, Wallet, Banknote, Loader2, CheckCircle, Tag, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/AppContext';
-import { api } from '@/services/api';
+import { AddressSelectorModal } from '@/components/address/AddressSelectorModal';
+import { orderService } from '@/services/order.service';
+import { paymentService } from '@/services/payment.service';
+import { couponService } from '@/services/coupon.service';
+import { notificationService } from '@/services/notification.service';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const paymentMethods = [
+  { id: 'stripe', label: 'Card', icon: CreditCard, description: 'Credit/Debit Card (Stripe)' },
   { id: 'upi', label: 'UPI', icon: Wallet, description: 'Pay via UPI apps' },
-  { id: 'card', label: 'Card', icon: CreditCard, description: 'Credit/Debit Card' },
   { id: 'cod', label: 'Cash', icon: Banknote, description: 'Cash on Delivery' },
-];
+] as const;
 
 export const Checkout: React.FC = () => {
   const navigate = useNavigate();
-  const { user, cart, getCartTotal, clearCart, addOrder } = useApp();
-  const [selectedPayment, setSelectedPayment] = useState('cod');
+  const { 
+    cart, 
+    getCartTotal, 
+    clearCart, 
+    addOrder, 
+    selectedAddress,
+    appliedCoupon,
+    applyCoupon: setAppliedCoupon,
+    removeCoupon,
+    addNotification,
+    getUniquePharmacies,
+  } = useApp();
+
+  const [selectedPayment, setSelectedPayment] = useState<'stripe' | 'upi' | 'cod'>('cod');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
+  // Delivery type (for multi-pharmacy orders)
+  const uniquePharmacies = getUniquePharmacies();
+  const isMultiPharmacy = uniquePharmacies.length > 1;
+  const [deliveryType, setDeliveryType] = useState<'quick' | 'normal'>('quick');
+
+  // Calculate totals
   const subtotal = getCartTotal();
-  const deliveryFee = 20;
-  const total = subtotal + deliveryFee;
+  const deliveryFee = isMultiPharmacy && deliveryType === 'quick' ? 40 : 20;
+  const discount = appliedCoupon 
+    ? appliedCoupon.discountType === 'percent'
+      ? Math.min(
+          (subtotal * appliedCoupon.value) / 100,
+          appliedCoupon.maxDiscount || Infinity
+        )
+      : appliedCoupon.value
+    : 0;
+  const total = Math.max(0, subtotal + deliveryFee - discount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    
+    setIsApplyingCoupon(true);
+    try {
+      const result = await couponService.applyCoupon(couponCode, subtotal);
+      if (result.valid && result.coupon) {
+        setAppliedCoupon(result.coupon);
+        toast.success(`Coupon applied! You save ₹${result.discount}`);
+        setCouponCode('');
+      } else {
+        toast.error(result.error || 'Invalid coupon');
+      }
+    } catch (error) {
+      toast.error('Failed to apply coupon');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
 
   const handlePlaceOrder = async () => {
-    if (!user?.address?.line1) {
-      toast.error('Please add a delivery address');
+    if (!selectedAddress) {
+      toast.error('Please select a delivery address');
+      setShowAddressModal(true);
       return;
     }
 
     setIsProcessing(true);
     try {
-      const order = await api.placeOrder({
+      let paymentStatus: 'pending' | 'paid' = 'pending';
+
+      // Process payment based on method
+      if (selectedPayment === 'stripe') {
+        const paymentIntent = await paymentService.createPaymentIntent(total * 100, 'inr');
+        const result = await paymentService.processPayment(paymentIntent.id, 'card');
+        if (!result.success) {
+          toast.error(result.error || 'Payment failed');
+          setIsProcessing(false);
+          return;
+        }
+        paymentStatus = 'paid';
+      } else if (selectedPayment === 'upi') {
+        // Mock UPI - would open UPI app in real implementation
+        const result = await paymentService.verifyUPIPayment('user@upi', total);
+        if (!result.success) {
+          toast.error(result.error || 'UPI payment failed');
+          setIsProcessing(false);
+          return;
+        }
+        paymentStatus = 'paid';
+      }
+      // COD remains 'pending'
+
+      // Create order
+      const order = await orderService.createOrder({
         items: cart,
-        totalAmount: total,
-        deliveryAddress: user.address,
+        address: selectedAddress,
         paymentMethod: selectedPayment,
+        paymentStatus,
+        deliveryType,
+        subtotal,
+        deliveryFee,
+        discount: Math.round(discount),
+        totalAmount: Math.round(total),
+        couponCode: appliedCoupon?.code,
       });
 
+      // Add to local state
       addOrder(order);
+      
+      // Create notification
+      await addNotification({
+        title: 'Order Confirmed! 🎉',
+        message: `Your order #${order.id} has been confirmed. A pharmacist will call you shortly.`,
+        type: 'order',
+        data: { orderId: order.id },
+      });
+
+      if (paymentStatus === 'paid') {
+        await addNotification({
+          title: 'Payment Successful 💳',
+          message: `Payment of ₹${total} for order #${order.id} was successful.`,
+          type: 'payment',
+          data: { orderId: order.id },
+        });
+      }
+
       setOrderId(order.id);
       setIsSuccess(true);
       clearCart();
@@ -59,9 +166,9 @@ export const Checkout: React.FC = () => {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200 }}
-          className="w-24 h-24 rounded-full gradient-success flex items-center justify-center mb-6"
+          className="w-24 h-24 rounded-full bg-success flex items-center justify-center mb-6"
         >
-          <CheckCircle size={48} className="text-success-foreground" />
+          <CheckCircle size={48} className="text-white" />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -77,11 +184,13 @@ export const Checkout: React.FC = () => {
           </p>
           <div className="swift-card mb-6 text-left">
             <p className="text-sm text-muted-foreground">Estimated Delivery</p>
-            <p className="font-bold text-lg text-primary">10-15 minutes</p>
+            <p className="font-bold text-lg text-primary">
+              {deliveryType === 'quick' ? '10-15 minutes' : '25-35 minutes'}
+            </p>
           </div>
           <div className="space-y-3">
-            <Button onClick={() => navigate('/orders')} className="w-full">
-              Track Order
+            <Button onClick={() => navigate(`/order/${orderId}`)} className="w-full">
+              View Order Details
             </Button>
             <Button
               onClick={() => navigate('/')}
@@ -97,7 +206,7 @@ export const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background safe-top safe-bottom">
+    <div className="min-h-screen bg-background safe-top safe-bottom pb-32">
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-border">
         <button
@@ -119,15 +228,25 @@ export const Checkout: React.FC = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Delivery Address</h3>
-                <button className="text-sm text-primary font-medium">Change</button>
+                <button 
+                  onClick={() => setShowAddressModal(true)}
+                  className="text-sm text-primary font-medium"
+                >
+                  {selectedAddress ? 'Change' : 'Add'}
+                </button>
               </div>
-              {user?.address?.line1 ? (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {user.address.line1}
-                  {user.address.line2 && `, ${user.address.line2}`}
-                  <br />
-                  {user.address.city}, {user.address.state} {user.address.pincode}
-                </p>
+              {selectedAddress ? (
+                <div className="mt-1">
+                  <p className="text-sm font-medium">{selectedAddress.label}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedAddress.name} • {selectedAddress.phone}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedAddress.addressLine1}
+                    {selectedAddress.addressLine2 && `, ${selectedAddress.addressLine2}`}
+                    , {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}
+                  </p>
+                </div>
               ) : (
                 <p className="text-sm text-destructive mt-1">
                   Please add a delivery address
@@ -136,6 +255,56 @@ export const Checkout: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Multi-Pharmacy Delivery Option */}
+        {isMultiPharmacy && (
+          <div className="swift-card">
+            <h3 className="font-semibold mb-3">Delivery Option</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Your cart has items from {uniquePharmacies.length} different pharmacies
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => setDeliveryType('quick')}
+                className={cn(
+                  "w-full p-3 rounded-xl border-2 text-left transition-all",
+                  deliveryType === 'quick'
+                    ? "border-primary bg-primary-light"
+                    : "border-border"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Quick Delivery</p>
+                    <p className="text-xs text-muted-foreground">
+                      Separate delivery partners • 10-15 mins
+                    </p>
+                  </div>
+                  <span className="font-semibold text-primary">₹40</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setDeliveryType('normal')}
+                className={cn(
+                  "w-full p-3 rounded-xl border-2 text-left transition-all",
+                  deliveryType === 'normal'
+                    ? "border-primary bg-primary-light"
+                    : "border-border"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Normal Delivery</p>
+                    <p className="text-xs text-muted-foreground">
+                      Single consolidated route • 25-35 mins
+                    </p>
+                  </div>
+                  <span className="font-semibold text-primary">₹20</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Order Items Summary */}
         <div className="swift-card">
@@ -150,6 +319,41 @@ export const Checkout: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Coupon */}
+        <div className="swift-card">
+          <h3 className="font-semibold mb-3">Apply Coupon</h3>
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-success-light">
+              <div className="flex items-center gap-2">
+                <Tag size={18} className="text-success" />
+                <div>
+                  <p className="font-medium text-success">{appliedCoupon.code}</p>
+                  <p className="text-xs text-success/80">You save ₹{Math.round(discount)}</p>
+                </div>
+              </div>
+              <button onClick={removeCoupon} className="p-1.5 hover:bg-success/20 rounded-lg">
+                <X size={18} className="text-success" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="Enter coupon code"
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleApplyCoupon} 
+                variant="outline"
+                disabled={isApplyingCoupon || !couponCode.trim()}
+              >
+                {isApplyingCoupon ? <Loader2 className="animate-spin" size={18} /> : 'Apply'}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Payment Method */}
@@ -207,9 +411,15 @@ export const Checkout: React.FC = () => {
               <span className="text-muted-foreground">Delivery Fee</span>
               <span>₹{deliveryFee}</span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-success">
+                <span>Discount</span>
+                <span>-₹{Math.round(discount)}</span>
+              </div>
+            )}
             <div className="border-t border-border pt-2 flex justify-between font-semibold text-base">
               <span>Total</span>
-              <span className="text-primary">₹{total}</span>
+              <span className="text-primary">₹{Math.round(total)}</span>
             </div>
           </div>
         </div>
@@ -222,16 +432,22 @@ export const Checkout: React.FC = () => {
             onClick={handlePlaceOrder}
             size="xl"
             className="w-full"
-            disabled={isProcessing}
+            disabled={isProcessing || cart.length === 0}
           >
             {isProcessing ? (
               <Loader2 className="animate-spin" size={20} />
             ) : (
-              `Place Order • ₹${total}`
+              `Place Order • ₹${Math.round(total)}`
             )}
           </Button>
         </div>
       </div>
+
+      {/* Address Selector Modal */}
+      <AddressSelectorModal
+        isOpen={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+      />
     </div>
   );
 };

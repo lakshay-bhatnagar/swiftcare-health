@@ -1,7 +1,7 @@
 // Mock API Service Layer
 // In production, replace with actual API calls
 
-import { Medicine, Pharmacy, Order } from '@/context/AppContext';
+import { Medicine, Pharmacy, Order, Address, CartItem } from '@/types';
 
 // Simulated network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -242,23 +242,6 @@ export const api = {
   getMedicineById: async (id: string): Promise<Medicine | undefined> => {
     await delay(400);
     return mockMedicines.find(m => m.id === id);
-  },
-
-  // Orders
-  placeOrder: async (orderData: Partial<Order>): Promise<Order> => {
-    await delay(1500);
-    const order: Order = {
-      id: 'ORD' + Date.now(),
-      items: orderData.items || [],
-      totalAmount: orderData.totalAmount || 0,
-      status: 'confirmed',
-      placedAt: new Date(),
-      deliveryAddress: orderData.deliveryAddress!,
-      paymentMethod: orderData.paymentMethod || 'cod',
-      pharmacy: mockPharmacies[0],
-      estimatedDelivery: '10-15 mins',
-    };
-    return order;
   },
 
   // Emergency

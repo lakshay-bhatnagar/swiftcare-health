@@ -19,9 +19,9 @@ import { cn } from '@/lib/utils';
 
 const menuItems = [
   { id: 'orders', label: 'Order History', icon: Package, route: '/orders' },
+  { id: 'consultations', label: 'My Consultations', icon: User, route: '/consultations' },
   { id: 'prescriptions', label: 'Saved Prescriptions', icon: FileText, route: '/prescriptions' },
   { id: 'addresses', label: 'Manage Addresses', icon: MapPin, route: '/addresses' },
-  { id: 'settings', label: 'Settings', icon: Settings, route: '/settings' },
   { id: 'help', label: 'Help & Support', icon: HelpCircle, route: '/help' },
 ];
 

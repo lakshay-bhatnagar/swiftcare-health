@@ -93,7 +93,6 @@ export const Auth: React.FC = () => {
           email,
           name: 'User',
           phone: '',
-          address: { line1: '', city: '', state: '', pincode: '' },
         });
         navigate('/');
       }
@@ -116,7 +115,6 @@ export const Auth: React.FC = () => {
       email,
       name,
       phone,
-      address: { line1: '', city: '', state: '', pincode: '' },
     });
     toast.success('Welcome to SwiftCare!');
     navigate('/');
