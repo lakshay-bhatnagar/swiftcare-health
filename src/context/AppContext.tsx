@@ -1,93 +1,84 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { 
+  User, Address, Medicine, CartItem, Order, Notification, 
+  Consultation, Prescription, Coupon 
+} from '@/types';
+import addressService from '@/services/address.service';
+import orderService from '@/services/order.service';
+import notificationService from '@/services/notification.service';
+import prescriptionService from '@/services/prescription.service';
+import { doctorService } from '@/services/doctor.service';
 
-// Types
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  phone: string;
-  address: Address;
-  avatar?: string;
-}
-
-export interface Address {
-  line1: string;
-  line2?: string;
-  city: string;
-  state: string;
-  pincode: string;
-  coordinates?: { lat: number; lng: number };
-}
-
-export interface Medicine {
-  id: string;
-  name: string;
-  genericName: string;
-  category: string;
-  price: number;
-  mrp: number;
-  discount: number;
-  image: string;
-  description: string;
-  dosage: string;
-  manufacturer: string;
-  prescriptionRequired: boolean;
-  inStock: boolean;
-  pharmacyId: string;
-  pharmacyName: string;
-}
-
-export interface CartItem {
-  medicine: Medicine;
-  quantity: number;
-}
-
-export interface Pharmacy {
-  id: string;
-  name: string;
-  address: string;
-  distance: string;
-  deliveryTime: string;
-  rating: number;
-  reviewCount: number;
-  image: string;
-  isOpen: boolean;
-}
-
-export interface Order {
-  id: string;
-  items: CartItem[];
-  totalAmount: number;
-  status: 'confirmed' | 'packed' | 'out_for_delivery' | 'delivered';
-  placedAt: Date;
-  deliveryAddress: Address;
-  paymentMethod: string;
-  pharmacy: Pharmacy;
-  estimatedDelivery: string;
-}
+// Re-export types for backward compatibility
+export type { User, Address, Medicine, CartItem, Order, Notification, Consultation, Prescription };
+export type { Pharmacy } from '@/types';
 
 interface AppState {
   user: User | null;
   isAuthenticated: boolean;
   cart: CartItem[];
   orders: Order[];
+  addresses: Address[];
+  selectedAddress: Address | null;
+  notifications: Notification[];
+  unreadNotificationCount: number;
+  consultations: Consultation[];
+  prescriptions: Prescription[];
+  appliedCoupon: Coupon | null;
   darkMode: boolean;
   hasSeenOnboarding: boolean;
 }
 
 interface AppContextType extends AppState {
+  // Auth
   login: (user: User) => void;
   logout: () => void;
+  updateUser: (user: Partial<User>) => void;
+  
+  // Cart
   addToCart: (medicine: Medicine) => void;
   removeFromCart: (medicineId: string) => void;
   updateCartQuantity: (medicineId: string, quantity: number) => void;
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemCount: () => number;
+  getUniquePharmacies: () => string[];
+  
+  // Addresses
+  loadAddresses: () => Promise<void>;
+  addAddress: (address: Omit<Address, 'id'>) => Promise<Address>;
+  updateAddress: (id: string, updates: Partial<Address>) => Promise<void>;
+  deleteAddress: (id: string) => Promise<void>;
+  setSelectedAddress: (address: Address | null) => void;
+  setDefaultAddress: (id: string) => Promise<void>;
+  
+  // Orders
+  loadOrders: () => Promise<void>;
+  addOrder: (order: Order) => void;
+  
+  // Notifications
+  loadNotifications: () => Promise<void>;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => Promise<void>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  clearNotifications: () => Promise<void>;
+  
+  // Consultations
+  loadConsultations: () => Promise<void>;
+  addConsultation: (consultation: Consultation) => void;
+  
+  // Prescriptions
+  loadPrescriptions: () => Promise<void>;
+  addPrescription: (prescription: Prescription) => void;
+  removePrescription: (id: string) => Promise<void>;
+  
+  // Coupons
+  applyCoupon: (coupon: Coupon) => void;
+  removeCoupon: () => void;
+  
+  // UI
   toggleDarkMode: () => void;
   completeOnboarding: () => void;
-  addOrder: (order: Order) => void;
-  updateUser: (user: Partial<User>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -104,14 +95,27 @@ interface AppProviderProps {
   children: ReactNode;
 }
 
+const STORAGE_KEY = 'swiftcare_state';
+
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('swiftcare_state');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
-        ...parsed,
-        orders: parsed.orders?.map((o: any) => ({ ...o, placedAt: new Date(o.placedAt) })) || [],
+        user: parsed.user || null,
+        isAuthenticated: parsed.isAuthenticated || false,
+        cart: parsed.cart || [],
+        orders: [],
+        addresses: [],
+        selectedAddress: null,
+        notifications: [],
+        unreadNotificationCount: 0,
+        consultations: [],
+        prescriptions: [],
+        appliedCoupon: null,
+        darkMode: parsed.darkMode || false,
+        hasSeenOnboarding: parsed.hasSeenOnboarding || false,
       };
     }
     return {
@@ -119,15 +123,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       isAuthenticated: false,
       cart: [],
       orders: [],
+      addresses: [],
+      selectedAddress: null,
+      notifications: [],
+      unreadNotificationCount: 0,
+      consultations: [],
+      prescriptions: [],
+      appliedCoupon: null,
       darkMode: false,
       hasSeenOnboarding: false,
     };
   });
 
-  // Persist state
+  // Persist minimal state to localStorage
   useEffect(() => {
-    localStorage.setItem('swiftcare_state', JSON.stringify(state));
-  }, [state]);
+    const toPersist = {
+      user: state.user,
+      isAuthenticated: state.isAuthenticated,
+      cart: state.cart,
+      darkMode: state.darkMode,
+      hasSeenOnboarding: state.hasSeenOnboarding,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
+  }, [state.user, state.isAuthenticated, state.cart, state.darkMode, state.hasSeenOnboarding]);
 
   // Apply dark mode
   useEffect(() => {
@@ -138,14 +156,38 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   }, [state.darkMode]);
 
+  // Load data on mount
+  useEffect(() => {
+    loadAddresses();
+    loadOrders();
+    loadNotifications();
+    loadConsultations();
+    loadPrescriptions();
+  }, []);
+
+  // ==================== AUTH ====================
   const login = (user: User) => {
     setState(prev => ({ ...prev, user, isAuthenticated: true }));
   };
 
   const logout = () => {
-    setState(prev => ({ ...prev, user: null, isAuthenticated: false, cart: [] }));
+    setState(prev => ({ 
+      ...prev, 
+      user: null, 
+      isAuthenticated: false, 
+      cart: [],
+      appliedCoupon: null,
+    }));
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setState(prev => ({
+      ...prev,
+      user: prev.user ? { ...prev.user, ...updates } : null,
+    }));
+  };
+
+  // ==================== CART ====================
   const addToCart = (medicine: Medicine) => {
     setState(prev => {
       const existing = prev.cart.find(item => item.medicine.id === medicine.id);
@@ -184,7 +226,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const clearCart = () => {
-    setState(prev => ({ ...prev, cart: [] }));
+    setState(prev => ({ ...prev, cart: [], appliedCoupon: null }));
   };
 
   const getCartTotal = () => {
@@ -195,6 +237,151 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return state.cart.reduce((count, item) => count + item.quantity, 0);
   };
 
+  const getUniquePharmacies = () => {
+    return [...new Set(state.cart.map(item => item.medicine.pharmacyId))];
+  };
+
+  // ==================== ADDRESSES ====================
+  const loadAddresses = useCallback(async () => {
+    try {
+      const addresses = await addressService.getAddresses();
+      const defaultAddress = addresses.find(a => a.isDefault) || addresses[0] || null;
+      setState(prev => ({ 
+        ...prev, 
+        addresses,
+        selectedAddress: prev.selectedAddress || defaultAddress,
+      }));
+    } catch (error) {
+      console.error('Failed to load addresses:', error);
+    }
+  }, []);
+
+  const addAddress = async (address: Omit<Address, 'id'>): Promise<Address> => {
+    const newAddress = await addressService.addAddress(address);
+    await loadAddresses();
+    if (address.isDefault || state.addresses.length === 0) {
+      setState(prev => ({ ...prev, selectedAddress: newAddress }));
+    }
+    return newAddress;
+  };
+
+  const updateAddress = async (id: string, updates: Partial<Address>) => {
+    await addressService.updateAddress(id, updates);
+    await loadAddresses();
+  };
+
+  const deleteAddress = async (id: string) => {
+    await addressService.deleteAddress(id);
+    await loadAddresses();
+    if (state.selectedAddress?.id === id) {
+      setState(prev => ({ 
+        ...prev, 
+        selectedAddress: prev.addresses[0] || null 
+      }));
+    }
+  };
+
+  const setSelectedAddress = (address: Address | null) => {
+    setState(prev => ({ ...prev, selectedAddress: address }));
+  };
+
+  const setDefaultAddress = async (id: string) => {
+    await addressService.setDefaultAddress(id);
+    await loadAddresses();
+  };
+
+  // ==================== ORDERS ====================
+  const loadOrders = useCallback(async () => {
+    try {
+      const orders = await orderService.getOrders();
+      setState(prev => ({ ...prev, orders }));
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+    }
+  }, []);
+
+  const addOrder = (order: Order) => {
+    setState(prev => ({ ...prev, orders: [order, ...prev.orders] }));
+  };
+
+  // ==================== NOTIFICATIONS ====================
+  const loadNotifications = useCallback(async () => {
+    try {
+      const notifications = await notificationService.getNotifications();
+      const unreadCount = notifications.filter(n => !n.read).length;
+      setState(prev => ({ 
+        ...prev, 
+        notifications,
+        unreadNotificationCount: unreadCount,
+      }));
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  }, []);
+
+  const addNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
+    await notificationService.addNotification(notification);
+    await loadNotifications();
+  };
+
+  const markNotificationAsRead = async (id: string) => {
+    await notificationService.markAsRead(id);
+    await loadNotifications();
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    await notificationService.markAllAsRead();
+    await loadNotifications();
+  };
+
+  const clearNotifications = async () => {
+    await notificationService.clearAll();
+    await loadNotifications();
+  };
+
+  // ==================== CONSULTATIONS ====================
+  const loadConsultations = useCallback(async () => {
+    try {
+      const consultations = await doctorService.getConsultations();
+      setState(prev => ({ ...prev, consultations }));
+    } catch (error) {
+      console.error('Failed to load consultations:', error);
+    }
+  }, []);
+
+  const addConsultation = (consultation: Consultation) => {
+    setState(prev => ({ ...prev, consultations: [consultation, ...prev.consultations] }));
+  };
+
+  // ==================== PRESCRIPTIONS ====================
+  const loadPrescriptions = useCallback(async () => {
+    try {
+      const prescriptions = await prescriptionService.getPrescriptions();
+      setState(prev => ({ ...prev, prescriptions }));
+    } catch (error) {
+      console.error('Failed to load prescriptions:', error);
+    }
+  }, []);
+
+  const addPrescription = (prescription: Prescription) => {
+    setState(prev => ({ ...prev, prescriptions: [prescription, ...prev.prescriptions] }));
+  };
+
+  const removePrescription = async (id: string) => {
+    await prescriptionService.deletePrescription(id);
+    await loadPrescriptions();
+  };
+
+  // ==================== COUPONS ====================
+  const applyCoupon = (coupon: Coupon) => {
+    setState(prev => ({ ...prev, appliedCoupon: coupon }));
+  };
+
+  const removeCoupon = () => {
+    setState(prev => ({ ...prev, appliedCoupon: null }));
+  };
+
+  // ==================== UI ====================
   const toggleDarkMode = () => {
     setState(prev => ({ ...prev, darkMode: !prev.darkMode }));
   };
@@ -203,33 +390,42 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setState(prev => ({ ...prev, hasSeenOnboarding: true }));
   };
 
-  const addOrder = (order: Order) => {
-    setState(prev => ({ ...prev, orders: [order, ...prev.orders] }));
-  };
-
-  const updateUser = (updates: Partial<User>) => {
-    setState(prev => ({
-      ...prev,
-      user: prev.user ? { ...prev.user, ...updates } : null,
-    }));
-  };
-
   return (
     <AppContext.Provider
       value={{
         ...state,
         login,
         logout,
+        updateUser,
         addToCart,
         removeFromCart,
         updateCartQuantity,
         clearCart,
         getCartTotal,
         getCartItemCount,
+        getUniquePharmacies,
+        loadAddresses,
+        addAddress,
+        updateAddress,
+        deleteAddress,
+        setSelectedAddress,
+        setDefaultAddress,
+        loadOrders,
+        addOrder,
+        loadNotifications,
+        addNotification,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        clearNotifications,
+        loadConsultations,
+        addConsultation,
+        loadPrescriptions,
+        addPrescription,
+        removePrescription,
+        applyCoupon,
+        removeCoupon,
         toggleDarkMode,
         completeOnboarding,
-        addOrder,
-        updateUser,
       }}
     >
       {children}

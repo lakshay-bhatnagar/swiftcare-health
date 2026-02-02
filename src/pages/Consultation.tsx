@@ -168,7 +168,7 @@ export const Consultation: React.FC = () => {
                     <Clock size={14} />
                     <span>Next: {doctor.nextSlot}</span>
                   </div>
-                  <Button size="sm" variant="soft">
+                  <Button size="sm" variant="soft" onClick={() => navigate(`/doctor/${doctor.id}`)}>
                     <Calendar size={14} />
                     Book Now
                   </Button>

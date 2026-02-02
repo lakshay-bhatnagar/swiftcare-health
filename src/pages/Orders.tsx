@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Clock, CheckCircle, Truck } from 'lucide-react';
+import { ArrowLeft, Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { useApp } from '@/context/AppContext';
@@ -11,11 +11,16 @@ const statusConfig = {
   packed: { label: 'Packed', icon: Package, color: 'text-accent' },
   out_for_delivery: { label: 'Out for Delivery', icon: Truck, color: 'text-warning' },
   delivered: { label: 'Delivered', icon: CheckCircle, color: 'text-success' },
+  cancelled: { label: 'Cancelled', icon: XCircle, color: 'text-destructive' },
 };
 
 export const Orders: React.FC = () => {
   const navigate = useNavigate();
-  const { orders } = useApp();
+  const { orders, loadOrders } = useApp();
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   return (
     <MobileLayout showNav={false}>
@@ -46,19 +51,20 @@ export const Orders: React.FC = () => {
                 const StatusIcon = status.icon;
 
                 return (
-                  <motion.div
+                  <motion.button
                     key={order.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="swift-card"
+                    onClick={() => navigate(`/order/${order.id}`)}
+                    className="swift-card w-full text-left"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <p className="font-semibold">{order.id}</p>
                         <p className="text-xs text-muted-foreground">
-                          {order.placedAt.toLocaleDateString()} at{' '}
-                          {order.placedAt.toLocaleTimeString([], {
+                          {new Date(order.createdAt).toLocaleDateString()} at{' '}
+                          {new Date(order.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -98,11 +104,11 @@ export const Orders: React.FC = () => {
                           ₹{order.totalAmount}
                         </p>
                       </div>
-                      <button className="text-sm text-primary font-medium">
-                        View Details
-                      </button>
+                      <span className="text-sm text-primary font-medium">
+                        View Details →
+                      </span>
                     </div>
-                  </motion.div>
+                  </motion.button>
                 );
               })}
             </div>
