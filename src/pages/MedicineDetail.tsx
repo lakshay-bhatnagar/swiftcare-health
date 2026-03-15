@@ -51,33 +51,47 @@ export const MedicineDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background safe-top safe-bottom">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-20 p-4 flex items-center justify-between safe-top">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 bg-card/80 backdrop-blur-md rounded-full shadow-md"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex gap-2">
+      <header
+        className="fixed top-0 left-0 right-0 z-50 bg-transparent"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+        }}
+      >
+
+        <div className="h-14 px-4 flex items-center justify-between">
           <button
-            onClick={() => setLiked(!liked)}
+            onClick={() => navigate(-1)}
             className="p-2 bg-card/80 backdrop-blur-md rounded-full shadow-md"
           >
-            <Heart
-              size={20}
-              className={cn(liked && "fill-destructive text-destructive")}
-            />
+            <ArrowLeft size={20} />
           </button>
-          <button className="p-2 bg-card/80 backdrop-blur-md rounded-full shadow-md">
-            <Share2 size={20} />
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setLiked(!liked)}
+              className="p-2 bg-card/80 backdrop-blur-md rounded-full shadow-md"
+            >
+              <Heart
+                size={20}
+                className={cn(liked && "fill-destructive text-destructive")}
+              />
+            </button>
+            <button className="p-2 bg-card/80 backdrop-blur-md rounded-full shadow-md">
+              <Share2 size={20} />
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
+
 
       {/* Image */}
-      <div className="relative h-72 bg-muted">
+      <div
+        className="relative h-72 bg-muted"
+        style={{ marginTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+      >
+
         <img
           src={medicine.image}
           alt={medicine.name}
