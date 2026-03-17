@@ -21,11 +21,11 @@ const paymentMethods = [
 
 export const Checkout: React.FC = () => {
   const navigate = useNavigate();
-  const { 
-    cart, 
-    getCartTotal, 
-    clearCart, 
-    addOrder, 
+  const {
+    cart,
+    getCartTotal,
+    clearCart,
+    addOrder,
     selectedAddress,
     appliedCoupon,
     applyCoupon: setAppliedCoupon,
@@ -39,7 +39,7 @@ export const Checkout: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [showAddressModal, setShowAddressModal] = useState(false);
-  
+
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
@@ -52,19 +52,19 @@ export const Checkout: React.FC = () => {
   // Calculate totals
   const subtotal = getCartTotal();
   const deliveryFee = isMultiPharmacy && deliveryType === 'quick' ? 40 : 20;
-  const discount = appliedCoupon 
+  const discount = appliedCoupon
     ? appliedCoupon.discountType === 'percent'
       ? Math.min(
-          (subtotal * appliedCoupon.value) / 100,
-          appliedCoupon.maxDiscount || Infinity
-        )
+        (subtotal * appliedCoupon.value) / 100,
+        appliedCoupon.maxDiscount || Infinity
+      )
       : appliedCoupon.value
     : 0;
   const total = Math.max(0, subtotal + deliveryFee - discount);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
-    
+
     setIsApplyingCoupon(true);
     try {
       const result = await couponService.applyCoupon(couponCode, subtotal);
@@ -131,28 +131,37 @@ export const Checkout: React.FC = () => {
 
       // Add to local state
       addOrder(order);
-      
-      // Create notification
-      await addNotification({
-        title: 'Order Confirmed! 🎉',
-        message: `Your order #${order.id} has been confirmed. A pharmacist will call you shortly.`,
-        type: 'order',
-        data: { orderId: order.id },
-      });
 
-      if (paymentStatus === 'paid') {
+      // Create notification
+      try {
         await addNotification({
-          title: 'Payment Successful 💳',
-          message: `Payment of ₹${total} for order #${order.id} was successful.`,
-          type: 'payment',
+          title: 'Order Confirmed! 🎉',
+          message: `Your order #${order.id} has been confirmed. A pharmacist will call you shortly.`,
+          type: 'order',
           data: { orderId: order.id },
         });
+      } catch (e) {
+        console.warn("Notification failed", e);
+      }
+
+      if (paymentStatus === 'paid') {
+        try {
+          await addNotification({
+            title: 'Payment Successful 💳',
+            message: `Payment of ₹${total} for order #${order.id} was successful.`,
+            type: 'payment',
+            data: { orderId: order.id },
+          });
+        } catch (e) {
+          console.warn("Notification failed", e);
+        }
       }
 
       setOrderId(order.id);
       setIsSuccess(true);
       clearCart();
     } catch (error) {
+      console.error("ORDER ERROR:", error);
       toast.error('Failed to place order');
     } finally {
       setIsProcessing(false);
@@ -228,7 +237,7 @@ export const Checkout: React.FC = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Delivery Address</h3>
-                <button 
+                <button
                   onClick={() => setShowAddressModal(true)}
                   className="text-sm text-primary font-medium"
                 >
@@ -345,8 +354,8 @@ export const Checkout: React.FC = () => {
                 placeholder="Enter coupon code"
                 className="flex-1"
               />
-              <Button 
-                onClick={handleApplyCoupon} 
+              <Button
+                onClick={handleApplyCoupon}
                 variant="outline"
                 disabled={isApplyingCoupon || !couponCode.trim()}
               >

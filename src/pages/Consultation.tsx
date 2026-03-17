@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Stethoscope, Video, MessageCircle, Calendar, Star, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { doctorService } from '@/services/doctor.service';
+import { Doctor } from '@/types';
 
 const specialties = [
   { id: 'general', name: 'General Physician', icon: '👨‍⚕️' },
@@ -15,46 +17,61 @@ const specialties = [
   { id: 'gyno', name: 'Gynecologist', icon: '👩‍⚕️' },
 ];
 
-const doctors = [
-  {
-    id: 'doc-1',
-    name: 'Dr. Sarah Johnson',
-    specialty: 'General Physician',
-    experience: '12 years',
-    rating: 4.9,
-    reviews: 324,
-    fee: 299,
-    nextSlot: '10:30 AM',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
-  },
-  {
-    id: 'doc-2',
-    name: 'Dr. Michael Chen',
-    specialty: 'Cardiologist',
-    experience: '15 years',
-    rating: 4.8,
-    reviews: 256,
-    fee: 499,
-    nextSlot: '11:00 AM',
-    image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-  },
-  {
-    id: 'doc-3',
-    name: 'Dr. Priya Sharma',
-    specialty: 'Dermatologist',
-    experience: '8 years',
-    rating: 4.7,
-    reviews: 189,
-    fee: 349,
-    nextSlot: '2:00 PM',
-    image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400',
-  },
-];
+// const doctors = [
+//   {
+//     id: 'doc-1',
+//     name: 'Dr. Sarah Johnson',
+//     specialty: 'General Physician',
+//     experience: '12 years',
+//     rating: 4.9,
+//     reviews: 324,
+//     fee: 299,
+//     nextSlot: '10:30 AM',
+//     image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
+//   },
+//   {
+//     id: 'doc-2',
+//     name: 'Dr. Michael Chen',
+//     specialty: 'Cardiologist',
+//     experience: '15 years',
+//     rating: 4.8,
+//     reviews: 256,
+//     fee: 499,
+//     nextSlot: '11:00 AM',
+//     image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+//   },
+//   {
+//     id: 'doc-3',
+//     name: 'Dr. Priya Sharma',
+//     specialty: 'Dermatologist',
+//     experience: '8 years',
+//     rating: 4.7,
+//     reviews: 189,
+//     fee: 349,
+//     nextSlot: '2:00 PM',
+//     image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400',
+//   },
+// ];
 
 export const Consultation: React.FC = () => {
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null);
   const [consultType, setConsultType] = useState<'video' | 'chat'>('video');
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const data = await doctorService.getDoctors(selectedSpecialty || undefined);
+        setAvailableDoctors(data);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDoctors();
+  }, [selectedSpecialty]);
 
   return (
     <MobileLayout>
@@ -129,52 +146,57 @@ export const Consultation: React.FC = () => {
         <div className="px-4 pb-6">
           <h2 className="font-semibold mb-3">Available Doctors</h2>
           <div className="space-y-3">
-            {doctors.map((doctor, index) => (
-              <motion.div
-                key={doctor.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="swift-card-hover"
-              >
-                <div className="flex gap-3">
-                  <img
-                    src={doctor.image}
-                    alt={doctor.name}
-                    className="w-16 h-16 rounded-xl object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">{doctor.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {doctor.specialty} • {doctor.experience}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Star size={12} className="text-warning fill-warning" />
-                        <span className="font-medium">{doctor.rating}</span>
-                        <span className="text-muted-foreground">
-                          ({doctor.reviews})
-                        </span>
+            {loading ? (
+              <p className="text-center py-4">Finding doctors...</p>
+            ) : availableDoctors.length === 0 ? (
+              <p className="text-center py-4 text-muted-foreground">No doctors found for this specialty.</p>
+            ) : (
+              availableDoctors.map((doctor, index) => ( // Changed 'doctors' to 'availableDoctors'
+                <motion.div
+                  key={doctor.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="swift-card-hover"
+                >
+                  <div className="flex gap-3">
+                    <img
+                      src={doctor.image}
+                      alt={doctor.name}
+                      className="w-16 h-16 rounded-xl object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">{doctor.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {doctor.specialty} • {doctor.experience}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1 text-sm">
+                          <Star size={12} className="text-warning fill-warning" />
+                          <span className="font-medium">{doctor.rating}</span>
+                          <span className="text-muted-foreground">
+                            ({doctor.reviews})
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">₹{doctor.fee}</p>
+                      <p className="text-xs text-muted-foreground">per session</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-primary">₹{doctor.fee}</p>
-                    <p className="text-xs text-muted-foreground">per session</p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                    <div className="flex items-center gap-1 text-sm text-success">
+                      <Clock size={14} />
+                      <span>Next: {doctor.nextSlot}</span>
+                    </div>
+                    <Button size="sm" variant="soft" onClick={() => navigate(`/doctor/${doctor.id}`)}>
+                      <Calendar size={14} />
+                      Book Now
+                    </Button>
                   </div>
-                </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center gap-1 text-sm text-success">
-                    <Clock size={14} />
-                    <span>Next: {doctor.nextSlot}</span>
-                  </div>
-                  <Button size="sm" variant="soft" onClick={() => navigate(`/doctor/${doctor.id}`)}>
-                    <Calendar size={14} />
-                    Book Now
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              )))}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import type { Notification } from '@/types';
-import { supabaseClient } from './supabaseClient';
+import { supabase } from "../lib/supabase"; // Use the standard SDK instance
 
 const mapNotification = (n: any): Notification => ({
   id: n.id,
@@ -13,31 +13,83 @@ const mapNotification = (n: any): Notification => ({
 
 export const notificationService = {
   async getNotifications(userId: string, limit = 50, offset = 0): Promise<Notification[]> {
-    const rows = await supabaseClient
+    const { data, error } = await supabase
       .from('notifications')
-      .query<any[]>(`select=*&user_id=eq.${userId}&order=created_at.desc&limit=${limit}&offset=${offset}`);
-    return rows.map(mapNotification);
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("Error fetching notifications:", error.message);
+      throw error;
+    }
+
+    return (data || []).map(mapNotification);
   },
 
   async addNotification(userId: string, payload: Omit<Notification, 'id' | 'createdAt' | 'read'>) {
-    await supabaseClient.from('notifications').insert([{ user_id: userId, title: payload.title, message: payload.message, type: payload.type, is_read: false, data: payload.data ?? null }]);
+    const { error } = await supabase
+      .from('notifications')
+      .insert([
+        {
+          user_id: userId,
+          title: payload.title,
+          message: payload.message,
+          type: payload.type,
+          is_read: false,
+          data: payload.data ?? null,
+          created_at: new Date().toISOString(),
+        }
+      ]);
+
+    if (error) {
+      console.error("Error adding notification:", error.message);
+      throw error;
+    }
   },
 
   async markAsRead(id: string) {
-    await supabaseClient.from('notifications').update(`id=eq.${id}`, { is_read: true });
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   async markAllAsRead(userId: string) {
-    await supabaseClient.from('notifications').update(`user_id=eq.${userId}`, { is_read: true });
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId);
+
+    if (error) throw error;
   },
 
+  /**
+   * Listens for new notifications in real-time instead of polling.
+   */
   subscribeToNotifications(userId: string, cb: () => void) {
-    const interval = window.setInterval(async () => {
-      const rows = await supabaseClient.from('notifications').query<any[]>(`select=id&user_id=eq.${userId}&order=created_at.desc&limit=1`);
-      if (rows.length) cb();
-    }, 10000);
+    const channel = supabase
+      .channel(`user-notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: `user_id=eq.${userId}` 
+        },
+        () => {
+          cb();
+        }
+      )
+      .subscribe();
 
-    return () => window.clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 };
 

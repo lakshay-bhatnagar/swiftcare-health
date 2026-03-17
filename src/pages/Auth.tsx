@@ -18,12 +18,17 @@ const Auth: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const user = isSignup
-        ? await authService.signUp(form.email, form.password, form.name, form.phone)
-        : await authService.signIn(form.email, form.password);
-      login(user);
-      toast.success(isSignup ? 'Account created successfully' : 'Welcome back');
-      navigate('/');
+      if (isSignup) {
+        await authService.signUp(form.email, form.password, form.name, form.phone);
+        // DON'T call login(user) yet because they aren't verified
+        toast.success('Verification email sent! Please check your inbox.');
+        setIsSignup(false); // Switch to sign-in mode
+      } else {
+        const user = await authService.signIn(form.email, form.password);
+        login(user);
+        toast.success('Welcome back');
+        navigate('/');
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Authentication failed');
     } finally {

@@ -154,7 +154,7 @@ export const PharmacyDetail: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {medicines.map((medicine, index) => (
+              {(medicines || []).map((medicine, index) => (
                 <motion.div
                   key={medicine.id}
                   initial={{ opacity: 0, scale: 0.95 }}

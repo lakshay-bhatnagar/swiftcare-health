@@ -27,14 +27,24 @@ const menuItems = [
 
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, darkMode, toggleDarkMode, logout } = useApp();
+  const { user, isAuthenticated, darkMode, toggleDarkMode, logout, loadingUser } = useApp();
 
   const handleLogout = () => {
     logout();
     navigate('/auth');
   };
 
-  if (!isAuthenticated) {
+  if (loadingUser) {
+    return (
+      <MobileLayout>
+        <div className="safe-top flex items-center justify-center min-h-[70vh]">
+          <p>Loading profile...</p>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
     return (
       <MobileLayout>
         <div className="safe-top flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">

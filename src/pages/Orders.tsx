@@ -47,7 +47,10 @@ export const Orders: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {orders.map((order, index) => {
-                const status = statusConfig[order.status];
+                const status =
+                  statusConfig[order.status as keyof typeof statusConfig] ||
+                  statusConfig.confirmed;
+
                 const StatusIcon = status.icon;
 
                 return (

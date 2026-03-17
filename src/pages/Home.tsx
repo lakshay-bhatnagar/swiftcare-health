@@ -39,6 +39,8 @@ const quickActions = [
 ];
 
 export const Home: React.FC = () => {
+
+  
   const navigate = useNavigate();
   const { user, selectedAddress, unreadNotificationCount } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,7 +66,7 @@ export const Home: React.FC = () => {
     loadData();
   }, []);
 
-  const firstName = user?.name?.split(' ')[0] || 'there';
+  const firstName = user?.name ? user.name.split(' ')[0] : 'User';
   const displayAddress = selectedAddress 
     ? `${selectedAddress.addressLine1}, ${selectedAddress.city}` 
     : 'Add your address';

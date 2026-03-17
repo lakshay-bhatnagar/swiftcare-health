@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Zap, Ambulance, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
+import { toast } from 'sonner';
 
 const slides = [
   {
@@ -31,20 +32,26 @@ const slides = [
 
 export const Onboarding: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [name, setName] = useState('');
   const navigate = useNavigate();
   const { completeOnboarding } = useApp();
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      completeOnboarding();
+      if (!name.trim()) {
+        toast.error("Please enter your name");
+        return;
+      }
+      await completeOnboarding(name); // Pass the captured name here
       navigate('/auth');
     }
   };
 
-  const handleSkip = () => {
-    completeOnboarding();
+  const handleSkip = async () => {
+    // If they skip, we pass a default or empty string to satisfy the function
+    await completeOnboarding('User');
     navigate('/auth');
   };
 
@@ -100,11 +107,10 @@ export const Onboarding: React.FC = () => {
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentSlide
-                  ? 'w-6 bg-primary'
-                  : 'w-2 bg-muted-foreground/30'
-              }`}
+              className={`h-2 rounded-full transition-all duration-300 ${index === currentSlide
+                ? 'w-6 bg-primary'
+                : 'w-2 bg-muted-foreground/30'
+                }`}
             />
           ))}
         </div>

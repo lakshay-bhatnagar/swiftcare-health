@@ -3,6 +3,8 @@ import type { Database } from '@/types/database';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const SESSION_KEY = 'swiftcare_supabase_session';
+let isRefreshing = false;
+let refreshPromise: Promise<Session> | null = null;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.warn('Missing Supabase env vars: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
@@ -36,33 +38,103 @@ const authHeaders = () => {
   };
 };
 
+// Add this function inside your supabaseClient.ts
+async function refreshToken() {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+
+  refreshPromise = (async () => {
+    try {
+      const session = readSession();
+      if (!session?.refresh_token) throw new Error("No refresh token available");
+
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+      });
+
+      if (!res.ok) {
+        writeSession(null);
+        throw new Error("Refresh failed");
+      }
+
+      const newSession = await res.json();
+      writeSession(newSession);
+      return newSession;
+    } finally {
+      // Reset flags when done
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${SUPABASE_URL}${path}`, {
+  // 1. Define a function that always gets the LATEST headers
+  const getHeaders = () => ({ ...authHeaders(), ...(init.headers || {}) });
+
+  // 2. Initial attempt
+  let res = await fetch(`${SUPABASE_URL}${path}`, {
     ...init,
-    headers: {
-      ...authHeaders(),
-      ...(init.headers || {}),
-    },
+    headers: getHeaders(),
   });
+
+  let bodyJson;
+  try {
+    const clonedRes = res.clone();
+    bodyJson = await clonedRes.json();
+  } catch (e) {
+    bodyJson = {};
+  }
+
+  const isExpired = res.status === 401 || bodyJson.code === "PGRST303" || bodyJson.message === "JWT expired";
+
+  if (isExpired) {
+    try {
+      console.log("🔄 Token expired. Refreshing...");
+      // All concurrent requests will wait for this same promise
+      await refreshToken();
+
+      // 3. RETRY with the NEW headers (fresh token)
+      res = await fetch(`${SUPABASE_URL}${path}`, {
+        ...init,
+        headers: getHeaders(), // This now gets the new token from localStorage
+      });
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('supabase-auth-failed'));
+      throw e;
+    }
+  }
 
   if (!res.ok) {
     const text = await res.text();
+    console.error("SUPABASE ERROR:", text);
     throw new Error(text || `Supabase request failed (${res.status})`);
   }
 
-  if (res.status === 204) {
-    return undefined as T;
-  }
-
-  return res.json() as Promise<T>;
+  return res.status === 204 ? (undefined as T) : res.json();
 }
 
 export const supabaseClient = {
   auth: {
-    async signUp(email: string, password: string) {
+    async signUp(email: string, password: string, options?: { data?: any }) {
       const session = await request<Session>(`/auth/v1/signup`, {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        // We merge the email/password with any extra metadata provided in options.data
+        body: JSON.stringify({
+          email,
+          password,
+          data: options?.data
+        }),
       });
       writeSession(session);
       return session;
@@ -81,7 +153,8 @@ export const supabaseClient = {
     },
     async getUser() {
       try {
-        return await request<{ id: string; email: string }>(`/auth/v1/user`);
+        const user = await request<{ id: string; email?: string }>(`/auth/v1/user`);
+        return { data: user };
       } catch {
         return null;
       }
@@ -95,7 +168,10 @@ export const supabaseClient = {
       insert: <R = Database['public']['Tables'][T]['Row'][]>(payload: unknown) =>
         request<R>(`/rest/v1/${String(table)}`, {
           method: 'POST',
-          headers: { Prefer: 'return=representation' },
+          headers: {
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+          },
           body: JSON.stringify(payload),
         }),
       update: <R = Database['public']['Tables'][T]['Row'][]>(filters: string, payload: unknown) =>

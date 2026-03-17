@@ -28,15 +28,31 @@ export const doctorService = {
     return rows[0] ? mapDoctor(rows[0]) : null;
   },
 
+  // doctorService.ts
   async getAvailableSlots(doctorId: string, date: string): Promise<TimeSlot[]> {
+    // We query using the exact names from your new schema
     const rows = await supabaseClient
       .from('availability_slots')
-      .query<any[]>(`select=*&doctor_id=eq.${doctorId}&slot_date=eq.${date}&is_available=eq.true&order=slot_time.asc`);
+      .query<any[]>(
+        `select=*&doctor_id=eq.${doctorId}&slot_date=eq.${date}&is_available=eq.true&order=slot_time.asc`
+      );
 
-    return rows.map((r) => ({ id: r.id, time: r.slot_time, date: r.slot_date, available: r.is_available }));
+    return rows.map((r) => ({
+      id: r.id,
+      time: r.slot_time, // matches slot_time column
+      date: r.slot_date, // matches slot_date column
+      available: r.is_available, // matches is_available column
+    }));
   },
 
-  async bookAppointment(payload: { patientId: string; doctorId: string; appointmentDate: string; appointmentTime: string; consultationType: 'video' | 'chat' }): Promise<void> {
+  async bookAppointment(payload: {
+    patientId: string;
+    doctorId: string;
+    appointmentDate: string;
+    appointmentTime: string;
+    consultationType: 'video' | 'chat'
+  }): Promise<void> {
+    // 1. Insert the appointment record
     await supabaseClient.from('appointments').insert([{
       patient_id: payload.patientId,
       doctor_id: payload.doctorId,
@@ -45,6 +61,14 @@ export const doctorService = {
       consultation_type: payload.consultationType,
       status: 'pending',
     }]);
+
+    // 2. Mark the slot as taken so it disappears from the available list
+    // Note: If your supabaseClient supports .update(), use that. 
+    // Otherwise, you can use a query-based update if your client allows.
+    await supabaseClient.from('availability_slots').update(
+      `doctor_id=eq.${payload.doctorId}&slot_date=eq.${payload.appointmentDate}&slot_time=eq.${payload.appointmentTime}`, // filters
+      { is_available: false } // payload
+    );
   },
 
   async getConsultations(patientId: string): Promise<Consultation[]> {

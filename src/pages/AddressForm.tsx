@@ -78,12 +78,12 @@ export const AddressForm: React.FC = () => {
     setIsSaving(true);
     try {
       // Get coordinates
-      const coords = await addressService.geocodeAddress(form.pincode);
+      // const coords = await addressService.geocodeAddress(form.pincode);
       
       const addressData: Omit<Address, 'id'> = {
         ...form,
-        latitude: coords?.lat,
-        longitude: coords?.lng,
+        latitude: null,
+        longitude: null,
       };
 
       if (isEditing) {
