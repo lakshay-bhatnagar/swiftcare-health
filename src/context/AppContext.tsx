@@ -253,7 +253,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user && isMounted) {
+          // 1. Get Name from Metadata immediately (Fastest)
+          let displayName = user.user_metadata?.full_name || user.user_metadata?.name || 'User';
+
           const profile = await profileService.getProfile(user.id).catch(() => null);
+
+          if (profile?.full_name) {
+            displayName = profile.full_name;
+          }
 
           // 1. SET STATE
           setState(prev => ({
@@ -261,10 +268,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             user: {
               id: user.id,
               email: user.email || '',
-              name: profile?.full_name || user.user_metadata?.name || 'User',
+              name: displayName,
               phone: profile?.phone || user.phone || ''
             },
-            isAuthenticated: true
+            isAuthenticated: true,
+
+            // Sync onboarding status from profile
+            hasSeenOnboarding: profile?.onboarding_completed ?? prev.hasSeenOnboarding
           }));
 
           // 2. WAIT A MOMENT

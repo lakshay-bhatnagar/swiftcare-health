@@ -1,5 +1,5 @@
 import type { Pharmacy, Medicine } from '@/types';
-import { supabaseClient } from './supabaseClient';
+import { supabase } from "../lib/supabase"; // Use the standard SDK instance
 
 const toRad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -7,23 +7,27 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) *
     Math.cos(toRad(lat2)) *
     Math.sin(dLon / 2) ** 2;
-
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 export const pharmacyService = {
   async getNearbyPharmacies(userLat = 0, userLng = 0, limit = 20): Promise<Pharmacy[]> {
-    const rows = await supabaseClient
+    const { data: rows, error } = await supabase
       .from('pharmacies')
-      .query<any[]>(`select=*&limit=${limit}`);
+      .select('*')
+      .limit(limit);
 
-    return rows
+    if (error) {
+      console.error("Error fetching pharmacies:", error.message);
+      return [];
+    }
+
+    return (rows || [])
       .map((row) => {
         const distance =
           row.latitude && row.longitude
@@ -42,21 +46,17 @@ export const pharmacyService = {
           isOpen: row.is_open !== false,
         };
       })
-      .sort(
-        (a, b) =>
-          Number(a.distance.split(' ')[0]) -
-          Number(b.distance.split(' ')[0])
-      );
+      .sort((a, b) => Number(a.distance.split(' ')[0]) - Number(b.distance.split(' ')[0]));
   },
 
   async getPharmacyById(id: string): Promise<Pharmacy | null> {
-    const rows = await supabaseClient
+    const { data: row, error } = await supabase
       .from('pharmacies')
-      .query<any[]>(`select=*&id=eq.${id}&limit=1`);
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
 
-    const row = rows?.[0];
-
-    if (!row) return null;
+    if (error || !row) return null;
 
     return {
       id: row.id,
@@ -72,11 +72,14 @@ export const pharmacyService = {
   },
 
   async getPharmacyMedicines(pharmacyId: string): Promise<Medicine[]> {
-    const rows = await supabaseClient
+    const { data: rows, error } = await supabase
       .from('medicines')
-      .query<any[]>(`select=*&pharmacy_id=eq.${pharmacyId}`);
+      .select('*')
+      .eq('pharmacy_id', pharmacyId);
 
-    return rows.map((row): Medicine => ({
+    if (error) return [];
+
+    return (rows || []).map((row): Medicine => ({
       id: row.id,
       name: row.name ?? '',
       genericName: row.generic_name ?? '',

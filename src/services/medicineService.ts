@@ -1,5 +1,5 @@
 import type { Category, Medicine } from '@/types';
-import { supabaseClient } from './supabaseClient';
+import { supabase } from "../lib/supabase";
 
 const mapMedicine = (row: any): Medicine => {
   const mrp = Number(row.price);
@@ -27,11 +27,18 @@ const mapMedicine = (row: any): Medicine => {
 
 export const medicineService = {
   async getCategories(): Promise<Category[]> {
-    const rows = await supabaseClient.from('medicine_categories').query<any[]>(
-      'select=*&is_active=eq.true&order=sort_order.asc.nullslast'
-    );
+    const { data: rows, error } = await supabase
+      .from('medicine_categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true, nullsFirst: false });
 
-    return rows.map((row) => ({
+    if (error) {
+      console.error("Error categories:", error.message);
+      return [];
+    }
+
+    return (rows || []).map((row) => ({
       id: row.id,
       name: row.name,
       icon: row.icon ?? '💊',
@@ -40,31 +47,54 @@ export const medicineService = {
   },
 
   async getMedicines(params?: { categoryId?: string; search?: string; limit?: number; offset?: number }): Promise<Medicine[]> {
-    const query: string[] = ['select=*,pharmacies(name)'];
-    if (params?.categoryId) query.push(`category_id=eq.${params.categoryId}`);
-    if (params?.search) query.push(`name=ilike.*${encodeURIComponent(params.search)}*`);
-    query.push('order=name.asc');
-    if (typeof params?.limit === 'number') query.push(`limit=${params.limit}`);
-    if (typeof params?.offset === 'number') query.push(`offset=${params.offset}`);
+    let query = supabase.from('medicines').select('*, pharmacies(name)');
 
-    const rows = await supabaseClient.from('medicines').query<any[]>(query.join('&'));
-    return rows.map(mapMedicine);
+    if (params?.categoryId) {
+      query = query.eq('category_id', params.categoryId);
+    }
+    
+    if (params?.search) {
+      query = query.ilike('name', `%${params.search}%`);
+    }
+
+    query = query.order('name', { ascending: true });
+
+    if (typeof params?.limit === 'number') query = query.limit(params.limit);
+    if (typeof params?.offset === 'number') query = query.range(params.offset, params.offset + (params.limit || 10) - 1);
+
+    const { data: rows, error } = await query;
+    
+    if (error) {
+      console.error("Error medicines:", error.message);
+      return [];
+    }
+
+    return (rows || []).map(mapMedicine);
   },
 
   async getMedicineById(id: string): Promise<Medicine | null> {
-    const rows = await supabaseClient
+    const { data, error } = await supabase
       .from('medicines')
-      .query<any[]>(`select=*,pharmacies(name)&id=eq.${id}&limit=1`);
-    return rows[0] ? mapMedicine(rows[0]) : null;
+      .select('*, pharmacies(name)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return mapMedicine(data);
   },
 
   async getPopularMedicines(limit = 10): Promise<Medicine[]> {
-    const rows = await supabaseClient
+    const { data: rows, error } = await supabase
       .from('medicines')
-      .query<any[]>(`select=*,pharmacies(name)&order=order_count.desc.nullslast&limit=${limit}`);
+      .select('*, pharmacies(name)')
+      .order('order_count', { ascending: false, nullsFirst: false })
+      .limit(limit);
 
-    if (rows.length) return rows.map(mapMedicine);
-    return this.getMedicines({ limit });
+    if (error || !rows || rows.length === 0) {
+      return this.getMedicines({ limit });
+    }
+    
+    return rows.map(mapMedicine);
   },
 };
 

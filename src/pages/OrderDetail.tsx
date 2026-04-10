@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, MapPin, CreditCard, Clock, CheckCircle, Truck, Phone } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Package, MapPin, CreditCard, Clock, CheckCircle, Truck, Phone, RefreshCw } from 'lucide-react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils';
 import { Order } from '@/types';
 
 const statusSteps = [
+  { status: 'pending', label: 'Order Placed', icon: Clock },
   { status: 'confirmed', label: 'Confirmed', icon: CheckCircle },
-  { status: 'packed', label: 'Packed', icon: Package },
+  { status: 'packed', label: 'Packed', icon: Package, aliases: ['packed', 'preparing', 'processing', 'being_packed', 'Preparing'] },
   { status: 'out_for_delivery', label: 'Out for Delivery', icon: Truck },
   { status: 'delivered', label: 'Delivered', icon: CheckCircle },
 ];
@@ -18,13 +19,26 @@ const statusSteps = [
 export const OrderDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { orders } = useApp();
+  const { orders, loadOrders } = useApp();
   const [order, setOrder] = useState<Order | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const foundOrder = orders.find(o => o.id === id);
     setOrder(foundOrder || null);
   }, [id, orders]);
+
+  // Pull-to-refresh handler
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await loadOrders(); // This re-fetches from Supabase via your new service
+    } finally {
+      // Small delay so the spinner doesn't vanish instantly
+      setTimeout(() => setIsRefreshing(false), 800);
+    }
+  };
 
   if (!order) {
     return (
@@ -39,29 +53,65 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
-  const currentStepIndex = statusSteps.findIndex(s => s.status === order.status);
+  const currentStepIndex = statusSteps.findIndex(s =>
+    s.status === order.status || (s.aliases && s.aliases.includes(order.status))
+  );
+
+  // Add this safeguard right below it to prevent the timeline from "vanishing" 
+  // if a weird status comes through.
+  const displayStepIndex = currentStepIndex === -1 ? 1 : currentStepIndex;
 
   return (
     <MobileLayout showNav={false}>
-      <div className="safe-top pb-6">
+      <div className="safe-top pb-6 relative">
+
+        {/* Refresh Indicator */}
+        <motion.div
+          animate={{ height: isRefreshing ? 60 : 0, opacity: isRefreshing ? 1 : 0 }}
+          className="flex items-center justify-center overflow-hidden bg-muted/30"
+        >
+          <RefreshCw className="animate-spin text-primary" size={20} />
+          <span className="ml-2 text-sm font-medium text-muted-foreground">Updating status...</span>
+        </motion.div>
+
         {/* Header */}
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-border">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 hover:bg-muted rounded-xl transition-colors"
-          >
-            <ArrowLeft size={22} />
-          </button>
-          <div>
-            <h1 className="text-lg font-semibold">Order Details</h1>
-            <p className="text-xs text-muted-foreground">{order.id}</p>
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between border-b border-border bg-background sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 hover:bg-muted rounded-xl transition-colors"
+            >
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h1 className="text-lg font-semibold">Order Details</h1>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{order.orderNumber}</p>
+            </div>
           </div>
+
+          {/* Manual Refresh Button (Optional shortcut) */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2 hover:bg-muted rounded-full transition-all active:scale-95"
+          >
+            <RefreshCw size={18} className={cn(isRefreshing && "animate-spin text-primary")} />
+          </button>
         </div>
 
+        {/* Scrollable Content */}
         <div className="px-4 py-4 space-y-4">
           {/* Order Status Timeline */}
           <div className="swift-card">
-            <h3 className="font-semibold mb-4">Order Status</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">Order Status</h3>
+              {order.status === 'delivered' && (
+                <span className="text-xs bg-success-light text-success px-2 py-1 rounded-full font-bold">
+                  COMPLETED
+                </span>
+              )}
+            </div>
+            {/* ... rest of your status timeline code ... */}
             <div className="relative">
               {statusSteps.map((step, index) => {
                 const isCompleted = index <= currentStepIndex;
@@ -136,7 +186,7 @@ export const OrderDetail: React.FC = () => {
               <div>
                 <p className="font-semibold">Delivery Address</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {order.address.name} • {order.address.phone}
+                  {order.address.full_name} • {order.address.phone_number}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {order.address.addressLine1}
@@ -200,7 +250,7 @@ export const OrderDetail: React.FC = () => {
               <span className="capitalize">{order.paymentMethod}</span>
               <span className={cn(
                 "ml-auto px-2 py-0.5 rounded-full text-xs font-medium",
-                order.paymentStatus === 'paid' 
+                order.paymentStatus === 'paid'
                   ? "bg-success-light text-success"
                   : "bg-warning-light text-warning"
               )}>

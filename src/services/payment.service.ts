@@ -37,23 +37,29 @@ const savePayments = (payments: PaymentIntent[]): void => {
 
 export const paymentService = {
   // Create payment intent (mock Stripe)
-  createPaymentIntent: async (amount: number, currency: string = 'inr'): Promise<PaymentIntent> => {
-    await delay(800);
+  createPaymentIntent: async (amount: number): Promise<{ clientSecret: string }> => {
+    // Replace with your actual project URL from Supabase Dashboard
+    const PROJECT_ID = 'yenfvedvyzgqejytgolp'; 
+    const URL = `https://${PROJECT_ID}.functions.supabase.co/create-payment-intent`;
     
-    const paymentIntent: PaymentIntent = {
-      id: 'pi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      amount,
-      currency,
-      status: 'pending',
-      clientSecret: 'cs_' + Math.random().toString(36).substr(2, 24),
-      createdAt: new Date(),
-    };
-    
-    const payments = getStoredPayments();
-    payments.push(paymentIntent);
-    savePayments(payments);
-    
-    return paymentIntent;
+    // Use your Anon Key (find in Settings > API)
+    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllbmZ2ZWR2eXpncWVqeXRnb2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3OTk1NjksImV4cCI6MjA4ODM3NTU2OX0.zaVYqv1LeKm2_n7cjBNLdGoDMWAV6RWqVLnPfdOrTfI';
+
+    const response = await fetch(URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_KEY}`,
+      },
+      body: JSON.stringify({ amount }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create payment intent');
+    }
+
+    return await response.json(); // Should return { clientSecret: 'pi_...' }
   },
 
   // Process payment (mock - simulates success/failure)

@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
+import { Stripe } from '@capacitor-community/stripe';
+import { useEffect } from 'react';
 
 // Pages
 import Splash from "./pages/Splash";
@@ -31,7 +33,24 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+
+const App = () => {
+  // Add this useEffect block
+  useEffect(() => {
+    const initializeStripe = async () => {
+      try {
+        await Stripe.initialize({
+          publishableKey: "pk_test_51SwPnOH1t6V81mNiMMu3seyqyrrcLgP6LSTbKG7FWkadxIMpSHIpenpjNlMFWJawjoJkVfkD3KzK9CTVtPazmxMq00UVBF3yNc",
+        });
+        console.log("Stripe Initialized Successfully");
+      } catch (error) {
+        console.error("Stripe Initialization Error:", error);
+      }
+    };
+
+    initializeStripe();
+  }, []);
+  return (
   <QueryClientProvider client={queryClient}>
     <AppProvider>
       <TooltipProvider>
@@ -68,6 +87,6 @@ const App = () => (
       </TooltipProvider>
     </AppProvider>
   </QueryClientProvider>
-);
+)};
 
 export default App;

@@ -23,8 +23,8 @@ export const AddressForm: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
     label: 'Home' as 'Home' | 'Work' | 'Other',
-    name: '',
-    phone: '',
+    full_name: '',
+    phone_number: '',
     addressLine1: '',
     addressLine2: '',
     city: '',
@@ -39,8 +39,8 @@ export const AddressForm: React.FC = () => {
       if (address) {
         setForm({
           label: address.label,
-          name: address.name,
-          phone: address.phone,
+          full_name: address.full_name,
+          phone_number: address.phone_number,
           addressLine1: address.addressLine1,
           addressLine2: address.addressLine2 || '',
           city: address.city,
@@ -60,12 +60,12 @@ export const AddressForm: React.FC = () => {
     e.preventDefault();
     
     // Validation
-    if (!form.name || !form.phone || !form.addressLine1 || !form.city || !form.state || !form.pincode) {
+    if (!form.full_name || !form.phone_number || !form.addressLine1 || !form.city || !form.state || !form.pincode) {
       toast.error('Please fill all required fields');
       return;
     }
 
-    if (!/^\d{10}$/.test(form.phone)) {
+    if (!/^\d{10}$/.test(form.phone_number)) {
       toast.error('Please enter a valid 10-digit phone number');
       return;
     }
@@ -145,8 +145,8 @@ export const AddressForm: React.FC = () => {
             <Label htmlFor="name">Full Name *</Label>
             <Input
               id="name"
-              value={form.name}
-              onChange={e => handleChange('name', e.target.value)}
+              value={form.full_name}
+              onChange={e => handleChange('full_name', e.target.value)}
               placeholder="Enter full name"
               className="mt-1.5"
             />
@@ -157,8 +157,8 @@ export const AddressForm: React.FC = () => {
             <Input
               id="phone"
               type="tel"
-              value={form.phone}
-              onChange={e => handleChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+              value={form.phone_number}
+              onChange={e => handleChange('phone_number', e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="10-digit mobile number"
               className="mt-1.5"
             />

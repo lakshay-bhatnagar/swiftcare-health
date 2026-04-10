@@ -5,8 +5,9 @@ export interface CreateOrderParams {
   userId: string;
   items: CartItem[];
   address: Address;
-  paymentMethod: 'stripe' | 'upi' | 'cod';
+  paymentMethod: 'card' | 'upi' | 'cod' | 'online' | 'wallet';
   deliveryType: 'quick' | 'normal';
+  paymentStatus?: 'pending' | 'paid';
 }
 
 const groupByPharmacy = (items: CartItem[]) => {
@@ -40,6 +41,7 @@ export const orderService = {
 
     return (rows || []).map((row) => ({
       id: row.id,
+      orderNumber: row.order_number,
       userId: row.user_id,
       items: (row.order_items || []).map((i: any) => ({
         quantity: i.quantity,
@@ -72,8 +74,8 @@ export const orderService = {
       address: {
         id: row.addresses?.id ?? '',
         label: row.addresses?.label ?? 'Home',
-        name: '',
-        phone: '',
+        full_name: row.addresses?.full_name ?? '',
+        phone_number: row.addresses?.phone_number ?? '',
         addressLine1: row.addresses?.address_line1 ?? '',
         addressLine2: row.addresses?.address_line2 ?? '',
         city: row.addresses?.city ?? '',
@@ -105,8 +107,16 @@ export const orderService = {
 
     for (const [pharmacyId, items] of grouped.entries()) {
       const subtotal = items.reduce((sum, i) => sum + i.medicine.price * i.quantity, 0);
-      const deliveryFee = params.deliveryType === 'quick' ? 49 : 0;
+      const deliveryFee = params.deliveryType === 'quick' ? 29 : 0;
 
+      // Ensure we map the payment method to the DB-approved strings
+      const dbPaymentMethod = 
+        params.paymentMethod === 'card' ? 'online' : 
+        params.paymentMethod === 'upi' ? 'wallet' : 
+        params.paymentMethod;
+
+      const statusToInsert = params.paymentStatus || 'pending';
+      
       // 1. Insert the Order
       const { data: orderRow, error: orderError } = await supabase
         .from('orders')
@@ -117,7 +127,8 @@ export const orderService = {
           subtotal,
           delivery_fee: deliveryFee,
           total: subtotal + deliveryFee,
-          payment_method: params.paymentMethod,
+          payment_method: dbPaymentMethod,
+          payment_status: statusToInsert,
           status: 'pending'
         }])
         .select()

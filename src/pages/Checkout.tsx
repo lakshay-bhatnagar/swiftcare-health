@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Stripe, PaymentSheetEventsEnum } from '@capacitor-community/stripe';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, CreditCard, Wallet, Banknote, Loader2, CheckCircle, Tag, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,7 +15,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const paymentMethods = [
-  { id: 'stripe', label: 'Card', icon: CreditCard, description: 'Credit/Debit Card (Stripe)' },
+  { id: 'card', label: 'Card', icon: CreditCard, description: 'Credit/Debit Card (Stripe)' },
   { id: 'upi', label: 'UPI', icon: Wallet, description: 'Pay via UPI apps' },
   { id: 'cod', label: 'Cash', icon: Banknote, description: 'Cash on Delivery' },
 ] as const;
@@ -34,11 +35,13 @@ export const Checkout: React.FC = () => {
     getUniquePharmacies,
   } = useApp();
 
-  const [selectedPayment, setSelectedPayment] = useState<'stripe' | 'upi' | 'cod'>('cod');
+  const [selectedPayment, setSelectedPayment] = useState<'card' | 'upi' | 'cod'>('cod');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [showAddressModal, setShowAddressModal] = useState(false);
+
+  const [orderNumber, setOrderNumber] = useState('');
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -94,16 +97,32 @@ export const Checkout: React.FC = () => {
       let paymentStatus: 'pending' | 'paid' = 'pending';
 
       // Process payment based on method
-      if (selectedPayment === 'stripe') {
-        const paymentIntent = await paymentService.createPaymentIntent(total * 100, 'inr');
-        const result = await paymentService.processPayment(paymentIntent.id, 'card');
-        if (!result.success) {
-          toast.error(result.error || 'Payment failed');
+      if (selectedPayment === 'card') {
+        const { clientSecret } = await paymentService.createPaymentIntent(Math.round(total * 100));
+
+        await Stripe.createPaymentSheet({
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'SwiftCare Health',
+        });
+
+        // This returns an object: { paymentResult: PaymentSheetEventsEnum }
+        const result = await Stripe.presentPaymentSheet();
+
+        // Compare using the Enum instead of a raw string
+        if (result.paymentResult !== PaymentSheetEventsEnum.Completed) {
+          toast.error('Payment not completed');
           setIsProcessing(false);
           return;
         }
+
+        // --- ADD THIS DELAY ---
+        // Gives the native bridge time to stabilize after the UI transition
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         paymentStatus = 'paid';
-      } else if (selectedPayment === 'upi') {
+      }
+      else if (selectedPayment === 'upi') {
         // Mock UPI - would open UPI app in real implementation
         const result = await paymentService.verifyUPIPayment('user@upi', total);
         if (!result.success) {
@@ -127,7 +146,7 @@ export const Checkout: React.FC = () => {
         discount: Math.round(discount),
         totalAmount: Math.round(total),
         couponCode: appliedCoupon?.code,
-      });
+      } as any);
 
       // Add to local state
       addOrder(order);
@@ -136,7 +155,7 @@ export const Checkout: React.FC = () => {
       try {
         await addNotification({
           title: 'Order Confirmed! 🎉',
-          message: `Your order #${order.id} has been confirmed. A pharmacist will call you shortly.`,
+          message: `Your order #${order.orderNumber} has been confirmed. A pharmacist will call you shortly.`,
           type: 'order',
           data: { orderId: order.id },
         });
@@ -148,7 +167,7 @@ export const Checkout: React.FC = () => {
         try {
           await addNotification({
             title: 'Payment Successful 💳',
-            message: `Payment of ₹${total} for order #${order.id} was successful.`,
+            message: `Payment of ₹${total} for order #${order.orderNumber} was successful.`,
             type: 'payment',
             data: { orderId: order.id },
           });
@@ -158,6 +177,7 @@ export const Checkout: React.FC = () => {
       }
 
       setOrderId(order.id);
+      setOrderNumber(order.orderNumber || order.id);
       setIsSuccess(true);
       clearCart();
     } catch (error) {
@@ -186,7 +206,7 @@ export const Checkout: React.FC = () => {
         >
           <h1 className="text-2xl font-bold mb-2">Order Placed!</h1>
           <p className="text-muted-foreground mb-2">
-            Your order #{orderId} has been confirmed
+            Your order #{orderNumber} has been confirmed
           </p>
           <p className="text-sm text-muted-foreground mb-6">
             A pharmacist will call you shortly to verify your order
@@ -248,7 +268,7 @@ export const Checkout: React.FC = () => {
                 <div className="mt-1">
                   <p className="text-sm font-medium">{selectedAddress.label}</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedAddress.name} • {selectedAddress.phone}
+                    {selectedAddress.full_name} • {selectedAddress.phone_number}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {selectedAddress.addressLine1}

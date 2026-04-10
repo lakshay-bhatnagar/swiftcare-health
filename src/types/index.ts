@@ -11,8 +11,8 @@ export interface User {
 export interface Address {
   id: string;
   label: 'Home' | 'Work' | 'Other';
-  name: string;
-  phone: string;
+  full_name: string;
+  phone_number: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
@@ -62,6 +62,7 @@ export interface Pharmacy {
 
 export interface Order {
   id: string;
+  orderNumber?: string;
   userId: string;
   items: CartItem[];
   pharmacyIds: string[];
@@ -73,7 +74,7 @@ export interface Order {
   paymentMethod: 'stripe' | 'upi' | 'cod';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   address: Address;
-  status: 'confirmed' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  status: 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
   createdAt: Date;
   estimatedDelivery: string;
   pharmacy: Pharmacy;

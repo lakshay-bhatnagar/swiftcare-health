@@ -1,18 +1,31 @@
-import { supabaseClient } from './supabaseClient';
+// services/profile.service.ts
+import { supabase } from "../lib/supabase";
 
 export const profileService = {
     async getProfile(userId: string) {
-        // We use .query because of your custom client structure
-        const rows = await supabaseClient
+        const { data, error } = await supabase
             .from('profiles')
-            .query<any[]>(`select=full_name,phone,onboarding_completed&user_id=eq.${userId}&limit=1`);
+            .select('full_name, phone, onboarding_completed')
+            .eq('user_id', userId)
+            .maybeSingle(); // Better than limit=1, returns null if not found
 
-        return rows[0] || null;
+        if (error) {
+            console.error("Error fetching profile:", error.message);
+            return null;
+        }
+
+        return data;
     },
 
     async updateProfile(userId: string, updates: { full_name?: string; phone?: string; onboarding_completed?: boolean }) {
-        return await supabaseClient
+        const { data, error } = await supabase
             .from('profiles')
-            .update(`user_id=eq.${userId}`, updates);
+            .update(updates)
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
     }
 };

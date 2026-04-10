@@ -113,7 +113,7 @@ export const AddressSelectorModal: React.FC<AddressSelectorModalProps> = ({
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-0.5">
-                              {address.name} • {address.phone}
+                              {address.full_name} • {address.phone_number}
                             </p>
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                               {address.addressLine1}

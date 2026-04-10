@@ -7,7 +7,10 @@ import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 
 const statusConfig = {
+  pending: { label: 'Pending', icon: Clock, color: 'text-muted-foreground' },
   confirmed: { label: 'Confirmed', icon: CheckCircle, color: 'text-primary' },
+  // Add 'preparing' as a key here so it maps to the Packed UI
+  preparing: { label: 'Packed', icon: Package, color: 'text-accent' }, 
   packed: { label: 'Packed', icon: Package, color: 'text-accent' },
   out_for_delivery: { label: 'Out for Delivery', icon: Truck, color: 'text-warning' },
   delivered: { label: 'Delivered', icon: CheckCircle, color: 'text-success' },
@@ -64,7 +67,7 @@ export const Orders: React.FC = () => {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="font-semibold">{order.id}</p>
+                        <p className="font-semibold">{order.orderNumber}</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(order.createdAt).toLocaleDateString()} at{' '}
                           {new Date(order.createdAt).toLocaleTimeString([], {

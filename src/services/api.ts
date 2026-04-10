@@ -3,14 +3,14 @@ import medicineService from './medicineService';
 import pharmacyService from './pharmacyService';
 
 export const categories: Category[] = [
-  { id: 'fever', name: 'Fever & Pain', icon: '🌡️', color: 'bg-red-100 dark:bg-red-900/30' },
-  { id: 'cold', name: 'Cold & Cough', icon: '🤧', color: 'bg-blue-100 dark:bg-blue-900/30' },
-  { id: 'diabetes', name: 'Diabetes', icon: '💉', color: 'bg-purple-100 dark:bg-purple-900/30' },
-  { id: 'heart', name: 'Heart Care', icon: '❤️', color: 'bg-pink-100 dark:bg-pink-900/30' },
-  { id: 'vitamins', name: 'Vitamins', icon: '💊', color: 'bg-green-100 dark:bg-green-900/30' },
-  { id: 'skin', name: 'Skin Care', icon: '✨', color: 'bg-yellow-100 dark:bg-yellow-900/30' },
-  { id: 'stomach', name: 'Stomach', icon: '🫃', color: 'bg-orange-100 dark:bg-orange-900/30' },
-  { id: 'first-aid', name: 'First Aid', icon: '🩹', color: 'bg-teal-100 dark:bg-teal-900/30' },
+  { id: 'Fever & Pain', name: 'Fever & Pain', icon: '🌡️', color: 'bg-red-100 dark:bg-red-900/30' },
+  { id: 'Cold & Cough', name: 'Cold & Cough', icon: '🤧', color: 'bg-blue-100 dark:bg-blue-900/30' },
+  { id: 'Diabetes Care', name: 'Diabetes Care', icon: '💉', color: 'bg-purple-100 dark:bg-purple-900/30' },
+  { id: 'Heart Care', name: 'Heart Care', icon: '❤️', color: 'bg-pink-100 dark:bg-pink-900/30' },
+  { id: 'Vitamins', name: 'Vitamins', icon: '💊', color: 'bg-green-100 dark:bg-green-900/30' },
+  { id: 'Skin Care', name: 'Skin Care', icon: '✨', color: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  { id: 'Stomach Care', name: 'Stomach Care', icon: '🫃', color: 'bg-orange-100 dark:bg-orange-900/30' },
+  { id: 'First Aid', name: 'First Aid', icon: '🩹', color: 'bg-teal-100 dark:bg-teal-900/30' },
 ];
 
 export const mockPharmacies: Pharmacy[] = [];

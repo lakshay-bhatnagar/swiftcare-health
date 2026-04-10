@@ -4,8 +4,8 @@ import { supabase } from "../lib/supabase"; // Use the standard SDK instance
 const mapAddress = (row: any): Address => ({
   id: row.id,
   label: row.label || 'Home',
-  name: row.full_name || '', 
-  phone: row.phone_number || '', 
+  full_name: row.full_name || '', 
+  phone_number: row.phone_number || '', 
   addressLine1: row.address_line1,
   addressLine2: row.address_line2 ?? '',
   city: row.city,
@@ -46,8 +46,8 @@ export const addressService = {
       .insert([{
         user_id: userId,
         label: address.label,
-        full_name: address.name,
-        phone_number: address.phone,
+        full_name: address.full_name,
+        phone_number: address.phone_number,
         address_line1: address.addressLine1,
         address_line2: address.addressLine2,
         city: address.city,
@@ -74,8 +74,8 @@ export const addressService = {
     
     // Map UI fields back to DB columns
     if (updates.label) payload.label = updates.label;
-    if (updates.name) payload.full_name = updates.name;
-    if (updates.phone) payload.phone_number = updates.phone;
+    if (updates.full_name) payload.full_name = updates.full_name;
+    if (updates.phone_number) payload.phone_number = updates.phone_number;
     if (updates.addressLine1) payload.address_line1 = updates.addressLine1;
     if (updates.addressLine2 !== undefined) payload.address_line2 = updates.addressLine2;
     if (updates.city) payload.city = updates.city;
