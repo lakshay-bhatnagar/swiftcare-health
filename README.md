@@ -1,5 +1,7 @@
 # 🏥 SwiftCare – Smart Healthcare & Medicine Delivery Platform
 
+![Hero](/swiftcare-health-screenshots/1.png)
+
 SwiftCare is a modern healthcare platform that enables users to order medicines, upload prescriptions, consult doctors online, and access healthcare services from the comfort of their homes. The platform is designed to provide a seamless and secure experience by integrating real-time authentication, cloud-based data storage, and an intuitive user interface.
 
 ---
