@@ -267,7 +267,7 @@ Cybersecurity Enthusiast | Software Developer | Healthcare Technology
 
 GitHub: [https://github.com/lakshay-bhatnagar](https://github.com/lakshay-bhatnagar)
 
-LinkedIn: [https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/lakshay-bhatnagar/)
+LinkedIn: [https://linkedin.com/in/lakshay-bhatnagar](https://www.linkedin.com/in/lakshay-bhatnagar/)
 
 ---
 
