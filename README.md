@@ -131,13 +131,13 @@ src/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/swiftcare.git
+git clone https://github.com/lakshay-bhatnagar/swiftcare.git
 ```
 
 ### 2. Navigate to the Project
 
 ```bash
-cd swiftcare
+cd swiftcare-health
 ```
 
 ### 3. Install Dependencies
@@ -200,23 +200,7 @@ Authentication is handled using **Supabase Auth**, while application data is sec
 
 ## 📸 Screenshots
 
-Add screenshots of your application here.
 
-```
-/screenshots
-    home.png
-    login.png
-    medicines.png
-    cart.png
-    checkout.png
-    profile.png
-```
-
-Example:
-
-| Home | Medicines |
-|------|------------|
-| ![](screenshots/home.png) | ![](screenshots/medicines.png) |
 
 ---
 
@@ -275,9 +259,9 @@ Bachelor of Technology (Computer Science & Engineering)
 
 Cybersecurity Enthusiast | Software Developer | Healthcare Technology
 
-GitHub: https://github.com/yourusername
+GitHub: [https://github.com/lakshay-bhatnagar](https://github.com/lakshay-bhatnagar)
 
-LinkedIn: https://linkedin.com/in/yourprofile
+LinkedIn: [https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/lakshay-bhatnagar/)
 
 ---
 
