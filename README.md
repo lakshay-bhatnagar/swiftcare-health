@@ -202,6 +202,10 @@ Authentication is handled using **Supabase Auth**, while application data is sec
 
 ## 📸 Screenshots
 
+![2](/swiftcare-health-screenshots/2.png)
+![3](/swiftcare-health-screenshots/3.png)
+![4](/swiftcare-health-screenshots/4.png)
+![5](/swiftcare-health-screenshots/5.png)
 
 
 ---
